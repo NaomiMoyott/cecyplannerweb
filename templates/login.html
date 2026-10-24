@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso - CecyPlanner CECYTEM</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cecytem: {
+                            DEFAULT: '#00563B',
+                            dark: '#003D29',
+                            gold: '#C5A059',
+                            goldlight: '#F4E8C1'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        title: ['Outfit', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-100 min-h-full flex items-center justify-center p-4 font-sans">
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200/80 overflow-hidden my-6">
+        
+        <!-- Encabezado Institucional -->
+        <div class="bg-cecytem p-6 text-center text-white relative">
+            <div class="w-14 h-14 bg-white text-cecytem rounded-2xl flex items-center justify-center font-bold text-2xl mx-auto shadow-md border-2 border-cecytem-gold mb-2">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <h1 class="font-title text-2xl font-bold tracking-tight">CecyPlanner</h1>
+            <p class="text-[11px] text-cecytem-goldlight uppercase tracking-wider font-semibold mt-0.5">CECYTEM Plantel Tenango del Valle</p>
+        </div>
+
+        <!-- Pestañas para alternar entre Iniciar Sesión y Registro -->
+        <div class="flex border-b border-slate-200 bg-slate-50">
+            <button type="button" id="tab-login-btn" onclick="showForm('login')" class="flex-1 py-3 text-xs font-bold text-cecytem border-b-2 border-cecytem bg-white transition-all">
+                <i class="fa-solid fa-right-to-bracket mr-1"></i> Iniciar Sesión
+            </button>
+            <button type="button" id="tab-register-btn" onclick="showForm('register')" class="flex-1 py-3 text-xs font-bold text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all">
+                <i class="fa-solid fa-user-plus mr-1"></i> Registrarse
+            </button>
+        </div>
+
+        <div class="p-6 sm:p-8">
+            
+            {% if error %}
+            <div class="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-semibold flex items-center space-x-2">
+                <i class="fa-solid fa-circle-exclamation text-base shrink-0"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <!-- FORMULARIO 1: INICIAR SESIÓN -->
+            <form id="form-login" action="/login" method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Matrícula Escolar</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-id-card absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                        <input type="text" name="matricula" required placeholder="Ej. 22CE409211" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-cecytem focus:bg-white transition-all">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Contraseña</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                        <input type="password" name="password" required placeholder="••••••••" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-cecytem focus:bg-white transition-all">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-cecytem hover:bg-cecytem-dark text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all active:scale-98 text-sm flex items-center justify-center space-x-2 mt-2">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Ingresar a CecyPlanner</span>
+                </button>
+            </form>
+
+            <!-- FORMULARIO 2: REGISTRO CON CORREO INSTITUCIONAL -->
+            <form id="form-register" action="/register" method="POST" class="space-y-3.5 hidden">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre Completo *</label>
+                    <input type="text" name="nombre_completo" required placeholder="Ej. Naomi Michell Moyott" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-cecytem focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">Matrícula Escolar *</label>
+                    <input type="text" name="matricula" required placeholder="Ej. 22CE409211" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-cecytem focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">Correo Institucional (@soycecytem.mx) *</label>
+                    <input type="email" name="email" required placeholder="alumna@soycecytem.mx" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-cecytem focus:bg-white">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">Carrera Técnico *</label>
+                        <select name="carrera" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-cecytem">
+                            <option value="Programación" selected>Programación</option>
+                            <option value="Mantenimiento">Mantenimiento</option>
+                            <option value="Procesos">Procesos Ind.</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">Semestre *</label>
+                        <select name="semestre" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-cecytem">
+                            <option value="5" selected>5° Semestre</option>
+                            <option value="1">1° Semestre</option>
+                            <option value="3">3° Semestre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">Crea una Contraseña *</label>
+                    <input type="password" name="password" required placeholder="••••••••" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-cecytem focus:bg-white">
+                </div>
+
+                <button type="submit" class="w-full bg-cecytem hover:bg-cecytem-dark text-white font-bold py-2.5 px-4 rounded-xl shadow-lg transition-all active:scale-98 text-xs flex items-center justify-center space-x-2 mt-3">
+                    <i class="fa-solid fa-user-check"></i>
+                    <span>Crear Cuenta e Iniciar</span>
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <script>
+        function showForm(type) {
+            const formLogin = document.getElementById('form-login');
+            const formRegister = document.getElementById('form-register');
+            const tabLoginBtn = document.getElementById('tab-login-btn');
+            const tabRegisterBtn = document.getElementById('tab-register-btn');
+
+            if (type === 'login') {
+                formLogin.classList.remove('hidden');
+                formRegister.classList.add('hidden');
+                tabLoginBtn.className = "flex-1 py-3 text-xs font-bold text-cecytem border-b-2 border-cecytem bg-white transition-all";
+                tabRegisterBtn.className = "flex-1 py-3 text-xs font-bold text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all";
+            } else {
+                formRegister.classList.remove('hidden');
+                formLogin.classList.add('hidden');
+                tabRegisterBtn.className = "flex-1 py-3 text-xs font-bold text-cecytem border-b-2 border-cecytem bg-white transition-all";
+                tabLoginBtn.className = "flex-1 py-3 text-xs font-bold text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all";
+            }
+        }
+    </script>
+</body>
+</html>
