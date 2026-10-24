@@ -57,7 +57,6 @@ def login():
                     session['email'] = usuario.get('email', '')
                     session['carrera'] = usuario.get('carrera', '')
                     session['semestre'] = usuario.get('semestre', '')
-                    session['qr_path'] = usuario.get('qr_path', '')
                     return redirect(url_for('home'))
                 else:
                     return render_template('login.html', error='Matrícula o contraseña incorrectas.')
@@ -113,19 +112,7 @@ def logout():
 def home():
     if 'usuario_id' not in session:
         return redirect(url_for('login'))
-    
-    # Sincronizar ruta del QR en sesión desde la base de datos
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT qr_path FROM usuarios WHERE id = %s", (session['usuario_id'],))
-            u = cursor.fetchone()
-            if u:
-                session['qr_path'] = u.get('qr_path', '')
-    finally:
-        conn.close()
 
-    # Aseguramos que el ID esté disponible en el objeto session/usuario
     return render_template('index.html', usuario=session)
 
 # -------------------------------------------------------------
