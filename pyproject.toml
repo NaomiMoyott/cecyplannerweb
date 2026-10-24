@@ -1,0 +1,9 @@
+[project]
+name = "cecyplannerweb"
+version = "1.0.0"
+dependencies = [
+    "Flask",
+    "pymysql",
+    "qrcode",
+    "pillow"
+]
