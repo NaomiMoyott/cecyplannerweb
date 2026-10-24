@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CecyPlanner - Sistema de Gestión Escolar CECYTEM</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Hoja de Estilos Personalizada -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cecytem: {
+                            DEFAULT: '#00563B',
+                            dark: '#003D29',
+                            light: '#007A54',
+                            accent: '#00A86B',
+                            gold: '#C5A059',
+                            goldlight: '#F4E8C1',
+                            bg: '#F8FAFC',
+                            surface: '#FFFFFF'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        title: ['Outfit', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-slate-800 bg-slate-50 min-h-full flex flex-col antialiased selection:bg-cecytem/20 selection:text-cecytem">
+
+    <!-- AGREGA ESTA LÍNEA AQUÍ -->
+    <input type="hidden" id="session-user-id" value="{{ usuario.usuario_id }}">
+
+    <div id="toast-container" class="fixed top-4 right-4 left-4 sm:left-auto z-50 flex flex-col gap-2 max-w-sm w-auto pointer-events-none"></div>
+
+    <!-- Resto de tu código HTML... -->
+
+    <div id="toast-container" class="fixed top-4 right-4 left-4 sm:left-auto z-50 flex flex-col gap-2 max-w-sm w-auto pointer-events-none"></div>
+
+    <header class="bg-cecytem text-white sticky top-0 z-30 shadow-md">
+        <!-- Campo oculto para almacenar el ID del usuario en sesión -->
+        <input type="hidden" id="session-user-id" value="{{ usuario.usuario_id }}">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+            
+            <div class="flex items-center space-x-3">
+                <button id="drawer-toggle" onclick="toggleDrawer(true)" class="md:hidden text-white hover:text-cecytem-gold p-2 rounded-xl active:bg-cecytem-dark transition-all focus:outline-none">
+                    <i class="fa-solid fa-bars-staggered text-xl"></i>
+                </button>
+                <div class="flex items-center space-x-2.5 cursor-pointer" onclick="switchTab('dashboard')">
+                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-bold text-cecytem shadow-sm border border-cecytem-gold">
+                        <i class="fa-solid fa-graduation-cap text-cecytem text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="font-title text-lg sm:text-xl font-bold tracking-tight text-white leading-none block">CecyPlanner</span>
+                        <span class="text-[10px] text-cecytem-gold uppercase font-semibold tracking-wider block">CECYTEM Plantel Tenango Del Valle</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hidden md:flex flex-1 max-w-md mx-6">
+                <div class="relative w-full">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-300 text-sm"></i>
+                    <input type="text" id="top-search" onkeyup="handleGlobalSearch(this.value)" placeholder="Buscar tareas, materias o proyectos..." class="w-full bg-cecytem-dark/50 text-white placeholder-slate-300 pl-10 pr-4 py-2 rounded-xl text-sm border border-white/10 focus:outline-none focus:bg-cecytem-dark focus:border-cecytem-gold transition-all">
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <button onclick="toggleRemindersPanel()" class="relative p-2.5 text-slate-200 hover:text-white hover:bg-cecytem-dark rounded-xl transition-all focus:outline-none">
+                    <i class="fa-regular fa-bell text-xl"></i>
+                    <span id="unread-count" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full badge-pulse hidden"></span>
+                </button>
+
+                <button onclick="solicitarPermisoNotificaciones()" class="bg-white/10 hover:bg-white/20 text-xs px-3 py-1.5 rounded-xl font-semibold transition-all border border-white/10 flex items-center space-x-1.5 cursor-pointer" title="Activar Alertas Celular">
+                    <i class="fa-solid fa-bell text-cecytem-gold"></i>
+                    <span>Activar Alertas Celular</span>
+                </button>
+
+                <div class="flex items-center space-x-3 pl-2 border-l border-white/10">
+                    <div class="w-9 h-9 rounded-xl bg-cecytem-gold text-cecytem-dark flex items-center justify-center font-bold text-sm shadow border-2 border-white uppercase">
+                        {{ usuario.nombre[:2] if usuario and usuario.nombre else 'US' }}
+                    </div>
+                    <div class="hidden lg:block text-left">
+                        <p class="text-xs font-semibold text-white leading-tight">{{ usuario.nombre if usuario else 'Usuario' }}</p>
+                        <p class="text-[10px] text-cecytem-gold font-medium">{{ usuario.carrera if usuario else 'Programación' }} {{ usuario.semestre if usuario else '5' }}° Sem</p>
+                    </div>
+                    <a href="/logout" title="Cerrar Sesión" class="text-white/70 hover:text-rose-300 p-1.5 rounded-lg transition-all text-sm">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="drawer-backdrop" onclick="toggleDrawer(false)" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden transition-opacity"></div>
+    <aside id="drawer" class="fixed top-0 left-0 bottom-0 w-72 bg-white z-50 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col justify-between p-4 shadow-2xl md:hidden">
+        <div>
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-cecytem text-white rounded-lg flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <span class="font-title font-bold text-cecytem text-lg">CecyPlanner</span>
+                </div>
+                <button onclick="toggleDrawer(false)" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="my-4 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-cecytem-gold text-cecytem-dark flex items-center justify-center font-bold text-sm uppercase">
+                    {{ usuario.nombre[:2] if usuario and usuario.nombre else 'US' }}
+                </div>
+                <div class="text-xs min-w-0 flex-1">
+                    <p class="font-bold text-slate-800 truncate">{{ usuario.nombre if usuario else 'Usuario' }}</p>
+                    <p class="text-slate-500">Matrícula: {{ usuario.matricula if usuario else '22CE409211' }}</p>
+                    <span class="text-[10px] text-cecytem font-semibold bg-cecytem/10 px-2 py-0.5 rounded inline-block mt-1">CECYTEM Tenango del Valle</span>
+                </div>
+            </div>
+
+            <nav class="space-y-1">
+                <button onclick="switchTab('dashboard'); toggleDrawer(false);" class="mobile-nav-item w-full flex items-center space-x-3 px-3 py-3 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                    <i class="fa-solid fa-chart-pie w-6 text-center text-cecytem"></i>
+                    <span>Resumen General</span>
+                </button>
+                <button onclick="switchTab('tareas'); toggleDrawer(false);" class="mobile-nav-item w-full flex items-center space-x-3 px-3 py-3 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                    <i class="fa-solid fa-list-check w-6 text-center text-cecytem"></i>
+                    <span>Agenda de Tareas</span>
+                </button>
+                <button onclick="switchTab('calendario'); toggleDrawer(false);" class="mobile-nav-item w-full flex items-center space-x-3 px-3 py-3 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                    <i class="fa-regular fa-calendar-days w-6 text-center text-cecytem"></i>
+                    <span>Calendario Mensual</span>
+                </button>
+                <button onclick="switchTab('eficiencia'); toggleDrawer(false);" class="mobile-nav-item w-full flex items-center space-x-3 px-3 py-3 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                    <i class="fa-solid fa-trophy w-6 text-center text-cecytem"></i>
+                    <span>Módulo de Eficiencia</span>
+                </button>
+                <button onclick="switchTab('maestros'); toggleDrawer(false);" class="mobile-nav-item w-full flex items-center space-x-3 px-3 py-3 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                    <i class="fa-solid fa-qrcode w-6 text-center text-cecytem"></i>
+                    <span>Portal Maestros & QR</span>
+                </button>
+                <button onclick="switchTab('recordatorios'); toggleDrawer(false);" class="mobile-nav-item w-full flex items-center space-x-3 px-3 py-3 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                    <i class="fa-solid fa-clock-rotate-left w-6 text-center text-cecytem"></i>
+                    <span>Centro de Alertas</span>
+                </button>
+                <button onclick="switchTab('configuracion'); toggleDrawer(false);" class="mobile-nav-item w-full flex items-center space-x-3 px-3 py-3 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                    <i class="fa-solid fa-gear w-6 text-center text-cecytem"></i>
+                    <span>Ajustes del Sistema</span>
+                </button>
+                <a href="/logout" class="mobile-nav-item w-full flex items-center space-x-3 px-3 py-3 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50">
+                    <i class="fa-solid fa-right-from-bracket w-6 text-center"></i>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </nav>
+        </div>
+
+        <div>
+            <button onclick="openModal(); toggleDrawer(false);" class="w-full bg-cecytem hover:bg-cecytem-dark text-white font-semibold py-3 px-4 rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 text-sm active:scale-95">
+                <i class="fa-solid fa-plus"></i>
+                <span>Agendar Tarea</span>
+            </button>
+        </div>
+    </aside>
+
+    <div class="flex-1 max-w-7xl w-full mx-auto flex flex-col md:flex-row px-3 sm:px-6 py-4 sm:py-6 gap-6 pb-24 md:pb-6">
+
+        <aside class="hidden md:block w-64 shrink-0 space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-3">
+                <div class="px-3 py-2 mb-1">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Navegación</p>
+                </div>
+                <nav class="space-y-1">
+                    <button onclick="switchTab('dashboard')" id="desk-nav-dashboard" class="desk-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button onclick="switchTab('tareas')" id="desk-nav-tareas" class="desk-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-list-check w-5 text-center"></i>
+                        <span>Agenda de Tareas</span>
+                    </button>
+                    <button onclick="switchTab('calendario')" id="desk-nav-calendario" class="desk-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all">
+                        <i class="fa-regular fa-calendar-days w-5 text-center"></i>
+                        <span>Calendario</span>
+                    </button>
+                    <button onclick="switchTab('eficiencia')" id="desk-nav-eficiencia" class="desk-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-trophy w-5 text-center"></i>
+                        <span>Módulo Eficiencia</span>
+                    </button>
+                    <button onclick="switchTab('maestros')" id="desk-nav-maestros" class="desk-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-qrcode w-5 text-center"></i>
+                        <span>Portal Maestros & QR</span>
+                    </button>
+                    <button onclick="switchTab('recordatorios')" id="desk-nav-recordatorios" class="desk-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i>
+                        <span>Alertas</span>
+                    </button>
+                    <button onclick="switchTab('configuracion')" id="desk-nav-configuracion" class="desk-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-gear w-5 text-center"></i>
+                        <span>Ajustes</span>
+                    </button>
+                </nav>
+
+                <hr class="my-4 border-slate-100">
+
+                <button onclick="openModal()" class="w-full bg-cecytem hover:bg-cecytem-dark text-white font-medium text-sm py-2.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 active:scale-98">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Agendar Nueva Tarea</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 min-w-0">
+            <section id="view-dashboard" class="space-y-5">
+                <div class="bg-gradient-to-r from-cecytem-dark via-cecytem to-cecytem-light rounded-2xl p-5 sm:p-6 text-white shadow-lg relative overflow-hidden">
+                    <div class="relative z-10">
+                        <span class="inline-block px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[11px] font-semibold text-cecytem-goldlight mb-2 border border-white/10">
+                            Ciclo Escolar 2026 - CECYTEM
+                        </span>
+                        <h1 class="text-2xl sm:text-3xl font-title font-bold">¡Hola de nuevo, {{ usuario.nombre.split()[0] if usuario and usuario.nombre else '' }}!</h1>
+                        <p class="text-slate-200 text-xs sm:text-sm mt-1 max-w-xl leading-relaxed">
+                            Aquí tienes el estado de tus entregas y eficiencia en trabajos.
+                        </p>
+                    </div>
+                    <i class="fa-solid fa-graduation-cap absolute -right-6 -bottom-6 text-white/10 text-9xl pointer-events-none"></i>
+                </div>
+
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg shrink-0">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Pendientes</p>
+                            <p id="stat-pending" class="text-xl font-bold text-slate-800">0</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg shrink-0">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">A Tiempo</p>
+                            <p id="stat-ontime" class="text-xl font-bold text-slate-800">0</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-lg shrink-0">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">A Destiempo</p>
+                            <p id="stat-late" class="text-xl font-bold text-slate-800">0</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-cecytem/10 text-cecytem flex items-center justify-center font-bold text-lg shrink-0">
+                            <i class="fa-solid fa-award"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Puntaje / Nivel</p>
+                            <div class="flex items-baseline space-x-1">
+                                <span id="stat-score" class="text-xl font-bold text-cecytem">100</span>
+                                <span id="stat-grade" class="text-xs font-extrabold text-cecytem-gold">A+</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-title font-bold text-slate-800">Próximos Vencimientos URGENTES</h2>
+                            <p class="text-xs text-slate-500">Atiende estas actividades antes de que venza el plazo</p>
+                        </div>
+                        <button onclick="switchTab('tareas')" class="text-xs text-cecytem font-bold hover:underline">Ver todas →</button>
+                    </div>
+
+                    <div id="dashboard-urgent-list" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- VISTA 2: AGENDA DE TAREAS -->
+            <section id="view-tareas" class="space-y-4 hidden">
+                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-title font-bold text-slate-800">Agenda Institucional de Tareas</h2>
+                        <p class="text-xs text-slate-500">Agenda, organiza y entrega las tareas de tus asignaturas.</p>
+                    </div>
+                    <button onclick="openModal()" class="w-full sm:w-auto bg-cecytem hover:bg-cecytem-dark text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow transition-all flex items-center justify-center space-x-2 active:scale-95">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span>Nueva Tarea</span>
+                    </button>
+                </div>
+
+                <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                        <input type="text" id="task-search" onkeyup="renderTasks()" placeholder="Buscar por materia, título o palabra clave..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-cecytem focus:bg-white transition-all">
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <select id="filter-status" onchange="renderTasks()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs sm:text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-cecytem">
+                            <option value="todos">Todos los Estados</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Entregada a Tiempo">Entregada a Tiempo</option>
+                            <option value="Entregada con Retraso">Entregada con Retraso</option>
+                            <option value="Vencida">Vencida</option>
+                        </select>
+
+                        <select id="filter-subject" onchange="renderTasks()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs sm:text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-cecytem">
+                            <option value="todas">Todas las Materias</option>
+                            <option value="Programación">Programación</option>
+                            <option value="Cálculo">Cálculo</option>
+                            <option value="Inglés">Inglés</option>
+                            <option value="Física">Física</option>
+                            <option value="Química">Química</option>
+                        </select>
+
+                        <select id="filter-sort" onchange="renderTasks()" class="col-span-2 sm:col-span-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs sm:text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-cecytem">
+                            <option value="due-asc">Próximas a Vencer</option>
+                            <option value="priority">Mayor Prioridad</option>
+                            <option value="newest">Más Recientes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="tasks-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </section>
+
+            <!-- VISTA 3: CALENDARIO MENSUAL -->
+            <section id="view-calendario" class="space-y-4 hidden">
+                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-title font-bold text-slate-800">Calendario Académico</h2>
+                        <p class="text-xs text-slate-500">Visualiza el mapa temporal de entregas del mes.</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-xl text-slate-600">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <span id="calendar-month-year" class="text-sm font-bold text-cecytem min-w-[120px] text-center"></span>
+                        <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-xl text-slate-600">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-3 sm:p-4 overflow-hidden">
+                    <div class="grid grid-cols-7 text-center font-bold text-[11px] sm:text-xs text-slate-400 uppercase border-b border-slate-100 pb-2 mb-2">
+                        <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
+                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-1 sm:gap-2 text-xs"></div>
+                </div>
+
+                <div id="calendar-day-details" class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hidden">
+                    <h3 id="calendar-selected-title" class="font-bold text-slate-800 text-sm mb-2"></h3>
+                    <div id="calendar-selected-tasks" class="space-y-2"></div>
+                </div>
+            </section>
+
+            <!-- VISTA 4: MÓDULO DE EFICIENCIA -->
+            <section id="view-eficiencia" class="space-y-5 hidden">
+                <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-12 h-12 bg-cecytem/10 text-cecytem rounded-2xl flex items-center justify-center text-xl font-bold shrink-0">
+                            <i class="fa-solid fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg sm:text-xl font-title font-bold text-slate-800">Evaluación de Eficiencia y Hábitos</h2>
+                            <p class="text-xs text-slate-500">Calificación automatizada basada en tus patrones reales de entrega.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-6 items-center">
+                        <div class="bg-slate-50 border border-slate-100 p-6 rounded-2xl flex flex-col items-center justify-center text-center">
+                            <div class="relative w-36 h-36 flex items-center justify-center">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                    <path class="text-slate-200" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    <path id="efficiency-circle" class="text-cecytem transition-all duration-1000 ease-out" stroke-dasharray="100, 100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                </svg>
+                                <div class="absolute flex flex-col items-center">
+                                    <span id="efficiency-score-display" class="text-3xl font-title font-bold text-slate-800">100</span>
+                                    <span id="efficiency-level-tag" class="text-xs font-black text-cecytem-gold uppercase">Nivel A+</span>
+                                </div>
+                            </div>
+                            <p id="efficiency-status-text" class="mt-3 text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+                                Puntualidad Excepcional
+                            </p>
+                        </div>
+
+                        <div class="md:col-span-2 space-y-3">
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-600"><i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i>A Tiempo (+10 pts)</span>
+                                    <span id="breakdown-ontime" class="text-slate-800 font-bold">0 / 0</span>
+                                </div>
+                                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div id="bar-ontime" class="bg-emerald-500 h-full w-0 transition-all duration-500"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-600"><i class="fa-solid fa-clock-rotate-left text-amber-500 mr-1"></i>Con Retraso (+3 pts)</span>
+                                    <span id="breakdown-late" class="text-slate-800 font-bold">0 / 0</span>
+                                </div>
+                                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div id="bar-late" class="bg-amber-500 h-full w-0 transition-all duration-500"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-600"><i class="fa-solid fa-circle-xmark text-rose-500 mr-1"></i>Vencida / Penalizada (-5 pts)</span>
+                                    <span id="breakdown-expired" class="text-slate-800 font-bold">0 / 0</span>
+                                </div>
+                                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div id="bar-expired" class="bg-rose-500 h-full w-0 transition-all duration-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="pt-2 flex justify-between text-xs text-slate-500 border-t border-slate-100">
+                                <span>Porcentaje de Puntualidad Estudiantil:</span>
+                                <strong id="punctuality-percentage" class="text-cecytem font-bold">100%</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 border-t border-slate-100 pt-5">
+                        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center space-x-2">
+                            <i class="fa-solid fa-medal text-cecytem-gold"></i>
+                            <span>Insignias de Hábitos Académicos</span>
+                        </h3>
+                        <div id="badges-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PORTAL DE MAESTROS Y CÓDIGO QR -->
+            <section id="view-maestros" class="space-y-4 hidden">
+                <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div>
+                            <span class="text-[10px] font-bold text-cecytem bg-cecytem/10 px-2.5 py-1 rounded-md uppercase tracking-wider">Módulo Exclusivo Docente</span>
+                            <h2 class="text-lg sm:text-xl font-title font-bold text-slate-800 mt-1">Identificación y Código QR del Alumno</h2>
+                            <p class="text-xs text-slate-500">Muestra este código QR a tus maestros para que puedan acceder a tu perfil y registrar notas o reportes institucionales.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                        <div class="bg-slate-50 border border-slate-200/80 p-6 rounded-2xl flex flex-col items-center justify-center text-center space-y-3">
+                            <div class="w-44 h-44 bg-white border-4 border-white shadow-md rounded-xl flex items-center justify-center p-2">
+                                {% if usuario and usuario.qr_path %}
+                                    <img src="{{ url_for('static', filename=usuario.qr_path) }}" alt="QR Alumno" class="w-full h-full object-contain rounded-lg">
+                                {% else %}
+                                    <div class="w-full h-full bg-slate-900 rounded-lg flex flex-col items-center justify-center text-white text-center p-2">
+                                        <i class="fa-solid fa-qrcode text-5xl text-cecytem-gold mb-1"></i>
+                                        <span class="text-[10px] font-mono tracking-tight">QR-ALUMNO-{{ usuario.matricula if usuario else '22CE409211' }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Botón para generar y guardar el QR en Python -->
+                            <a href="/generar-qr/{{ usuario.usuario_id if usuario else 1 }}" class="w-full bg-cecytem hover:bg-cecytem-dark text-white text-xs font-semibold py-2.5 px-3 rounded-xl transition-all inline-block text-center shadow">
+                                <i class="fa-solid fa-qrcode mr-1"></i> Generar QR y Guardar en BD
+                            </a>
+                        </div>
+
+                        <div class="md:col-span-2 space-y-4">
+                            <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                                <h4 class="font-bold text-amber-800 text-xs flex items-center">
+                                    <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Política de Reportes Institucionales
+                                </h4>
+                                <p class="text-[11px] text-amber-900 leading-relaxed">
+                                    Los reportes añadidos por los docentes mediante este código QR quedan guardados en la base de datos y <strong>no pueden ser eliminados ni modificados por el alumno</strong>.
+                                </p>
+                            </div>
+
+                            <div class="space-y-2">
+                                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Reportes Activos en el Expediente</h3>
+                                <div id="teacher-reports-list" class="space-y-2">
+                                    <p class="text-xs text-slate-400 p-3 bg-white rounded-xl border border-slate-200">Cargando reportes desde MySQL...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CENTRO DE ALERTAS -->
+            <section id="view-recordatorios" class="space-y-4 hidden">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-title font-bold text-slate-800">Centro de Alertas y Recordatorios</h2>
+                        <p class="text-xs text-slate-500">Sistema de prevención de entregas a destiempo en vivo.</p>
+                    </div>
+                    <span class="text-xs font-bold text-cecytem bg-cecytem/10 px-3 py-1 rounded-lg">En vivo</span>
+                </div>
+
+                <div id="reminders-list-full" class="space-y-3"></div>
+            </section>
+
+            <!-- CONFIGURACIÓN -->
+            <section id="view-configuracion" class="space-y-4 hidden">
+                <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4 max-w-xl">
+                    <h2 class="text-lg font-title font-bold text-slate-800">Ajustes y Notificaciones</h2>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Frecuencia de Recordatorios</label>
+                            <select id="setting-frequency" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-cecytem">
+                                <option value="24h">Alertas 24 Horas y 2 Horas antes de vencer</option>
+                                <option value="6h">Cada 6 Horas</option>
+                                <option value="1h">Urgente (Cada Hora)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <div>
+                                <p class="text-xs font-bold text-slate-800">Alertas Emergentes (Toast Alerts)</p>
+                                <p class="text-[11px] text-slate-500">Mostrar avisos en pantalla mientras usas la app</p>
+                            </div>
+                            <input type="checkbox" checked id="setting-toasts" class="w-4 h-4 accent-cecytem">
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                            <button onclick="resetData()" class="text-rose-600 hover:bg-rose-50 border border-rose-200 px-4 py-2 rounded-xl text-xs font-semibold transition-all">
+                                <i class="fa-solid fa-rotate mr-1"></i>Restablecer Datos de Ejemplo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Navegación Inferior Móvil -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200/80 shadow-lg z-30 px-2 py-1.5 flex justify-around items-center">
+        <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="mob-btn flex flex-col items-center justify-center w-14 py-1 text-slate-400 transition-all">
+            <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i>
+            <span class="text-[9px] font-medium">Inicio</span>
+        </button>
+        <button onclick="switchTab('tareas')" id="mob-nav-tareas" class="mob-btn flex flex-col items-center justify-center w-14 py-1 text-slate-400 transition-all">
+            <i class="fa-solid fa-list-check text-lg mb-0.5"></i>
+            <span class="text-[9px] font-medium">Tareas</span>
+        </button>
+        
+        <button onclick="openModal()" class="flex flex-col items-center justify-center -mt-5 bg-cecytem text-white w-12 h-12 rounded-full shadow-lg border-4 border-slate-50 active:scale-90 transition-transform">
+            <i class="fa-solid fa-plus text-lg"></i>
+        </button>
+
+        <button onclick="switchTab('maestros')" id="mob-nav-maestros" class="mob-btn flex flex-col items-center justify-center w-14 py-1 text-slate-400 transition-all">
+            <i class="fa-solid fa-qrcode text-lg mb-0.5"></i>
+            <span class="text-[9px] font-medium">QR Profe</span>
+        </button>
+        <button onclick="switchTab('eficiencia')" id="mob-nav-eficiencia" class="mob-btn flex flex-col items-center justify-center w-14 py-1 text-slate-400 transition-all">
+            <i class="fa-solid fa-trophy text-lg mb-0.5"></i>
+            <span class="text-[9px] font-medium">Puntaje</span>
+        </button>
+    </nav>
+
+    <!-- MODAL DE TAREAS -->
+    <div id="task-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden overflow-y-auto">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 overflow-hidden my-auto transform transition-all">
+            <div class="bg-cecytem px-5 py-3.5 text-white flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-regular fa-calendar-plus text-cecytem-gold text-lg"></i>
+                    <h3 id="modal-title-text" class="font-title font-bold text-base sm:text-lg">Agendar Tarea Académica</h3>
+                </div>
+                <button onclick="closeModal()" class="text-white/80 hover:text-white text-xl font-bold p-1">&times;</button>
+            </div>
+
+            <form id="task-form" onsubmit="handleSaveTask(event)" class="p-5 space-y-3.5">
+                <input type="hidden" id="form-edit-id">
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">Materia / Asignatura *</label>
+                    <input type="text" id="form-subject" required list="subject-suggestions" placeholder="Ej. Programación, Cálculo, Inglés, Física" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-cecytem">
+                    <datalist id="subject-suggestions">
+                        <option value="Programación"></option>
+                        <option value="Cálculo"></option>
+                        <option value="Inglés"></option>
+                        <option value="Física"></option>
+                        <option value="Química"></option>
+                        <option value="Taller de Ética"></option>
+                    </datalist>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">Título de la Tarea / Actividad *</label>
+                    <input type="text" id="form-title" required placeholder="Ej. Práctica 4 - Estructura de Control" class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-cecytem">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">Indicaciones o Descripción</label>
+                    <textarea id="form-desc" rows="2" placeholder="Especificaciones adicionales..." class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-cecytem"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">Fecha Límite *</label>
+                        <input type="date" id="form-date" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cecytem">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">Hora Límite *</label>
+                        <input type="time" id="form-time" required value="23:59" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cecytem">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">Prioridad *</label>
+                        <select id="form-priority" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cecytem bg-white">
+                            <option value="Alta">Alta Prioridad</option>
+                            <option value="Media" selected>Media Prioridad</option>
+                            <option value="Baja">Baja Prioridad</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">Estado Inicial *</label>
+                        <select id="form-status" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cecytem bg-white">
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Entregada a Tiempo">Entregada a Tiempo</option>
+                            <option value="Entregada con Retraso">Entregada con Retraso</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl text-slate-600 text-xs font-semibold hover:bg-slate-100">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="bg-cecytem hover:bg-cecytem-dark text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow transition-all active:scale-95">
+                        Guardar Actividad
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Archivo JavaScript Modularizado -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
