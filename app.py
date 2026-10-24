@@ -2,6 +2,8 @@ import os
 import qrcode
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import pymysql
+import io
+import base64
 
 app = Flask(__name__)
 app.secret_key = 'clave_secreta_cecyplanner_2026'
@@ -10,20 +12,32 @@ app.secret_key = 'clave_secreta_cecyplanner_2026'
 CLAVE_ACCESO_DOCENTE = 'docente123'
 
 def get_db_connection():
-    return pymysql.connect(
-        host='localhost',
-        user='root',
-        password='Deluna182809',  # <-- Pon tu contraseña real de MySQL
-        database='cecyplanner_db',
-        cursorclass=pymysql.cursors.DictCursor
-    )
+    # Si detecta que estamos en Vercel (leyendo las variables de Aiven), se conecta a la nube con SSL
+    if os.getenv('DB_HOST'):
+        return pymysql.connect(
+            host=os.getenv('DB_HOST'),
+            user=os.getenv('DB_USER', 'avnadmin'),
+            password=os.getenv('DB_PASSWORD'),
+            database=os.getenv('DB_NAME', 'defaultdb'),
+            port=int(os.getenv('DB_PORT', 26445)),
+            ssl={"fake_flag_to_enable_ssl": True},
+            cursorclass=pymysql.cursors.DictCursor
+        )
+    else:
+        # Si estás programando en tu compu localmente, usa tu base de datos de XAMPP/MySQL local
+        return pymysql.connect(
+            host='localhost',
+            user='root',
+            password='Deluna182809',
+            database='cecyplanner_db',
+            cursorclass=pymysql.cursors.DictCursor
+        )
 
 QR_FOLDER = os.path.join(app.root_path, 'static', 'qrs')
-os.makedirs(QR_FOLDER, exist_ok=True)
-
-# -------------------------------------------------------------
-# RUTAS DE AUTENTICACIÓN
-# -------------------------------------------------------------
+try:
+    os.makedirs(QR_FOLDER, exist_ok=True)
+except OSError:
+    pass  
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -37,12 +51,12 @@ def login():
                 cursor.execute("SELECT * FROM usuarios WHERE matricula = %s AND password = %s", (matricula, password))
                 usuario = cursor.fetchone()
                 if usuario:
-                    session['usuario_id'] = usuario['id']
-                    session['nombre'] = usuario['nombre_completo']
-                    session['matricula'] = usuario['matricula']
+                    session['usuario_id'] = usuario.get('id')
+                    session['nombre'] = usuario.get('nombre_completo', '')
+                    session['matricula'] = usuario.get('matricula', '')
                     session['email'] = usuario.get('email', '')
-                    session['carrera'] = usuario['carrera']
-                    session['semestre'] = usuario['semestre']
+                    session['carrera'] = usuario.get('carrera', '')
+                    session['semestre'] = usuario.get('semestre', '')
                     session['qr_path'] = usuario.get('qr_path', '')
                     return redirect(url_for('home'))
                 else:
@@ -180,11 +194,10 @@ def cambio_tarea(tarea_id):
 def baja_tarea(tarea_id):
     if 'usuario_id' not in session:
         return jsonify({'error': 'No autorizado'}), 401
-
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM tareas WHERE id=%s AND usuario_id=%s", (tarea_id, session['usuario_id']))
+            cursor.execute("DELETE FROM tareas WHERE id=%s AND usuario_id=%s", (tarea_id, session.get('usuario_id')))
             conn.commit()
             return jsonify({'success': True})
     finally:
@@ -199,27 +212,26 @@ def generar_qr_alumno(usuario_id):
     if 'usuario_id' not in session:
         return redirect(url_for('login'))
 
-    url_perfil = f"http://127.0.0.1:5000/maestro/perfil/{usuario_id}"
+    # Usa la URL pública actual en lugar de 127.0.0.1
+    url_perfil = f"{request.host_url}maestro/perfil/{usuario_id}"
+    
+    # Generar el QR en memoria (sin guardarlo en el servidor)
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(url_perfil)
     qr.make(fit=True)
     
     img = qr.make_image(fill_color="#00563B", back_color="white")
-    qr_filename = f"qr_alumno_{usuario_id}.png"
-    file_path = os.path.join(QR_FOLDER, qr_filename)
-    img.save(file_path)
     
-    relative_path = f"qrs/{qr_filename}"
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute("UPDATE usuarios SET qr_path = %s WHERE id = %s", (relative_path, usuario_id))
-            conn.commit()
-            session['qr_path'] = relative_path
-    finally:
-        conn.close()
+    # Convertir la imagen a formato base64 para mostrarla directo en el HTML
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    qr_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+    
+    # Puedes guardar el base64 en la sesión o pasarlo directamente a la plantilla
+    session['qr_code_data'] = qr_base64
 
     return redirect(url_for('home'))
+
 
 @app.route('/api/reportes/<int:usuario_id>')
 def consultar_reportes_api(usuario_id):
